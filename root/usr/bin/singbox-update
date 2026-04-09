@@ -1,0 +1,5 @@
+#!/bin/sh
+
+logger -t singbox "Update script triggered"
+echo "Check UCI config, download subs, restart sing-box..."
+exit 0

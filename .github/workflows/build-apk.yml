@@ -1,0 +1,60 @@
+name: Build and Publish APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install OpenWrt SDK
+        run: |
+          # Пример для x86_64, замените под свою архитектуру если нужно
+          wget https://downloads.openwrt.org/releases/24.10.4/targets/x86/64/openwrt-sdk-24.10.4-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+          tar xf openwrt-sdk-24.10.4-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst --strip-components=1
+          rm -f openwrt-sdk-24.10.4-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+
+      - name: Setup Keys
+        run: |
+          echo "${{ secrets.APK_PRIVATE_KEY }}" > private.pem
+          # Утилита для подписи ожидает ключ в определенном месте
+          mkdir -p ~/.abuild
+          cp private.pem ~/.abuild/saved-key.rsa
+
+      - name: Build Package
+        run: |
+          # Добавляем наше приложение в SDK
+          mkdir -p package/luci-app-singbox-subscriptions
+          cp -r $GITHUB_WORKSPACE/* package/luci-app-singbox-subscriptions/
+          
+          # Обновляем фиды и собираем только наш пакет
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          make defconfig
+          make package/luci-app-singbox-subscriptions/compile V=s
+
+      - name: Prepare Repository Structure
+        run: |
+          mkdir -p deploy/x86_64
+          cp bin/packages/x86_64/base/*.apk deploy/x86_64/
+          cd deploy/x86_64
+          
+          # Создаем индекс и подписываем его
+          # (Используем контейнер alpine для доступа к инструментам apk)
+          docker run --rm -v $(pwd):/work -w /work alpine:latest sh -c "
+            apk add apk-tools abuild
+            apk index -o APKINDEX.tar.gz *.apk
+            abuild-sign APKINDEX.tar.gz
+          "
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy
+          publish_branch: repo

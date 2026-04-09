@@ -1,0 +1,13 @@
+# Глобальные настройки
+config global 'settings'
+	option enabled '0'
+
+# Пример подписки (будет виден в таблице сразу после установки)
+config subscription
+	option name 'Пример подписки'
+	option url 'https://example.com'
+
+# Пример прямой ссылки
+config subscription
+	option name 'Мой сервер VLESS'
+	option url 'vless://uuid@://myhost.com'

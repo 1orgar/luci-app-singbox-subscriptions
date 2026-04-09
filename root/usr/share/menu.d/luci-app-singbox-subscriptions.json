@@ -1,0 +1,9 @@
+{
+    "admin/services/singbox": {
+        "title": "Singbox Sub",
+        "action": {
+            "type": "view",
+            "path": "singbox-subscriptions/config"
+        }
+    }
+}

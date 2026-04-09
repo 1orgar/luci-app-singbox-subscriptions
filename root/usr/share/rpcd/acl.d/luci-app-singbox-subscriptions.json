@@ -1,0 +1,14 @@
+{
+	"luci-app-singbox": {
+		"description": "Управление подписками Singbox",
+		"read": {
+			"uci": [ "singbox_subscriptions" ],
+			"file": {
+				"/usr/bin/singbox-update": [ "exec" ]
+			}
+		},
+		"write": {
+			"uci": [ "singbox_subscriptions" ]
+		}
+	}
+}
