@@ -30,23 +30,33 @@ jobs:
         run: |
           PKG_NAME="luci-app-singbox-subscriptions"
           
-          # Очистка и создание структуры
-          rm -rf package/$PKG_NAME
-          mkdir -p package/$PKG_NAME
+          # 1. Создаем структуру фида вне папки SDK
+          # Структура: custom-feed/название-категории/название-пакета
+          mkdir -p $GITHUB_WORKSPACE/custom-feed/luci-apps/$PKG_NAME
           
-          # Копируем файлы (Makefile в корень пакета, остальные в подпапки)
-          cp $GITHUB_WORKSPACE/Makefile package/$PKG_NAME/
-          cp -r $GITHUB_WORKSPACE/htdocs package/$PKG_NAME/
-          cp -r $GITHUB_WORKSPACE/root package/$PKG_NAME/
+          # 2. Копируем исходники
+          cp $GITHUB_WORKSPACE/Makefile $GITHUB_WORKSPACE/custom-feed/luci-apps/$PKG_NAME/
+          cp -r $GITHUB_WORKSPACE/htdocs $GITHUB_WORKSPACE/custom-feed/luci-apps/$PKG_NAME/
+          cp -r $GITHUB_WORKSPACE/root $GITHUB_WORKSPACE/custom-feed/luci-apps/$PKG_NAME/
           
-          # Обновляем фиды (нужно для зависимостей luci-base и sing-box)
+          # 3. Регистрируем этот фид в SDK
+          echo "src-link custom $GITHUB_WORKSPACE/custom-feed" > feeds.conf.default
+          
+          # 4. Обновляем и ПРИНУДИТЕЛЬНО устанавливаем наш пакет
           ./scripts/feeds update -a
+          ./scripts/feeds install -p custom -a
           ./scripts/feeds install -a
           
-          # Генерируем конфиг и проверяем, что наш пакет там есть
+          # 5. Генерируем конфиг
           make defconfig
           
-          # Собираем
+          # Проверка: если пакета нет в .config, выводим ошибку сразу
+          if ! grep -q "CONFIG_PACKAGE_$PKG_NAME=y" .config; then
+            echo "CONFIG_PACKAGE_$PKG_NAME=y" >> .config
+            make defconfig
+          fi
+          
+          # 6. Сборка
           make package/$PKG_NAME/compile V=s
 
 
