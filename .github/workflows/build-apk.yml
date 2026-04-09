@@ -29,22 +29,25 @@ jobs:
       - name: Build Package
         run: |
           PKG_NAME="luci-app-singbox-subscriptions"
-          mkdir -p package/$PKG_NAME
           
-          cp Makefile package/$PKG_NAME/
-          [ -d htdocs ] && cp -r htdocs package/$PKG_NAME/
-          [ -d root ] && cp -r root package/$PKG_NAME/
+          # 1. Создаем отдельную папку для исходников вне папки SDK
+          mkdir -p $GITHUB_WORKSPACE/custom-feed/$PKG_NAME
+          cp $GITHUB_WORKSPACE/Makefile $GITHUB_WORKSPACE/custom-feed/$PKG_NAME/
+          [ -d htdocs ] && cp -r htdocs $GITHUB_WORKSPACE/custom-feed/$PKG_NAME/
+          [ -d root ] && cp -r root $GITHUB_WORKSPACE/custom-feed/$PKG_NAME/
           
-          chmod +x package/$PKG_NAME/root/usr/bin/singbox-update 2>/dev/null || true
-
+          # 2. Добавляем эту папку как локальный фид
+          echo "src-link custom $GITHUB_WORKSPACE/custom-feed" > feeds.conf.default
+          
+          # 3. Обновляем фиды (теперь SDK увидит 'custom')
           ./scripts/feeds update -a
+          ./scripts/feeds install -a -p custom
           ./scripts/feeds install -a
           
-          # ЭТА СТРОКА ВАЖНА: принудительно включаем ваш пакет в сборку
-          echo "CONFIG_PACKAGE_$PKG_NAME=y" >> .config
-          
+          # 4. Конфигурируем и собираем
           make defconfig
-          make package/$PKG_NAME/compile V=s
+          # Инсталлируем конкретно наш пакет в дерево сборки
+          make package/$PKG_NAME/compile V=s || (echo "Логи сборки выше"; exit 1)
 
 
       - name: Prepare Repository Structure
