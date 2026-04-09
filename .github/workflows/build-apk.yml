@@ -14,10 +14,9 @@ jobs:
 
       - name: Install OpenWrt SDK
         run: |
-          pwd
           mkdir sdk
           cd sdk
-          pwd
+
           # Пример для x86_64, замените под свою архитектуру если нужно
           wget https://downloads.openwrt.org/releases/25.12.2/targets/x86/64/openwrt-sdk-25.12.2-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst
           tar xf openwrt-sdk-25.12.2-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst --strip-components=1
@@ -33,14 +32,14 @@ jobs:
 
       - name: Build Package
         run: |
-          pwd
+          cd sdk
           PKG_NAME="luci-app-singbox-subscriptions"
 
           mkdir -p package/myapp
           
-          mv ../Makefile package/myapp/
-          mv ../htdocs package/myapp/
-          mv ../root package/myapp/
+          cp ../Makefile package/myapp/
+          cp -r ../htdocs package/myapp/
+          cp -r ../root package/myapp/
 
           chmod +x package/myapp/root/usr/bin/singbox-update 2>/dev/null || true
 
@@ -57,7 +56,7 @@ jobs:
       - name: Prepare Repository Structure
         run: |
           mkdir -p deploy/x86_64
-          cp bin/packages/x86_64/base/*.apk deploy/x86_64/
+          cp sdk/bin/packages/x86_64/luci/*.apk deploy/x86_64/
           cd deploy/x86_64
           
           # Создаем индекс и подписываем его
