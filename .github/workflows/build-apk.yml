@@ -30,32 +30,23 @@ jobs:
         run: |
           PKG_NAME="luci-app-singbox-subscriptions"
           
-          # 1. Удаляем старые попытки и создаем чистую структуру
+          # Очистка и создание структуры
           rm -rf package/$PKG_NAME
           mkdir -p package/$PKG_NAME
           
-          # 2. Копируем файлы проекта напрямую в папку package SDK
+          # Копируем файлы (Makefile в корень пакета, остальные в подпапки)
           cp $GITHUB_WORKSPACE/Makefile package/$PKG_NAME/
-          [ -d "$GITHUB_WORKSPACE/htdocs" ] && cp -r $GITHUB_WORKSPACE/htdocs package/$PKG_NAME/
-          [ -d "$GITHUB_WORKSPACE/root" ] && cp -r $GITHUB_WORKSPACE/root package/$PKG_NAME/
+          cp -r $GITHUB_WORKSPACE/htdocs package/$PKG_NAME/
+          cp -r $GITHUB_WORKSPACE/root package/$PKG_NAME/
           
-          # 3. Принудительно устанавливаем права на скрипт
-          if [ -d "package/$PKG_NAME/root/usr/bin" ]; then
-            chmod +x package/$PKG_NAME/root/usr/bin/*
-          fi
-
-          # 4. Обновляем фиды
+          # Обновляем фиды (нужно для зависимостей luci-base и sing-box)
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # 5. КЛЮЧЕВОЙ МОМЕНТ: пересобираем индекс пакетов, чтобы SDK увидел новичка
-          make package/symlinks
-          
-          # 6. Включаем пакет в конфиг
-          echo "CONFIG_PACKAGE_$PKG_NAME=y" >> .config
+          # Генерируем конфиг и проверяем, что наш пакет там есть
           make defconfig
           
-          # 7. Сборка (используем упрощенный вызов)
+          # Собираем
           make package/$PKG_NAME/compile V=s
 
 
