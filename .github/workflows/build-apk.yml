@@ -33,9 +33,9 @@ jobs:
 
           mkdir -p package/myapp
           
-          cp Makefile package/myapp/
-          [ -d htdocs ] && cp -r htdocs package/myapp/
-          [ -d root ] && cp -r root package/myapp/
+          mv Makefile package/myapp/
+          mv htdocs package/myapp/
+          mv root package/myapp/
 
           chmod +x package/myapp/root/usr/bin/singbox-update 2>/dev/null || true
 
