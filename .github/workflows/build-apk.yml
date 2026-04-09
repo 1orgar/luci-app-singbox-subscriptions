@@ -30,34 +30,27 @@ jobs:
         run: |
           PKG_NAME="luci-app-singbox-subscriptions"
           
-          # 1. Создаем структуру фида вне папки SDK
-          # Структура: custom-feed/название-категории/название-пакета
-          mkdir -p $GITHUB_WORKSPACE/custom-feed/luci-apps/$PKG_NAME
-          
-          # 2. Копируем исходники
-          cp $GITHUB_WORKSPACE/Makefile $GITHUB_WORKSPACE/custom-feed/luci-apps/$PKG_NAME/
-          cp -r $GITHUB_WORKSPACE/htdocs $GITHUB_WORKSPACE/custom-feed/luci-apps/$PKG_NAME/
-          cp -r $GITHUB_WORKSPACE/root $GITHUB_WORKSPACE/custom-feed/luci-apps/$PKG_NAME/
-          
-          # 3. Регистрируем этот фид в SDK
-          echo "src-link custom $GITHUB_WORKSPACE/custom-feed" > feeds.conf.default
-          
-          # 4. Обновляем и ПРИНУДИТЕЛЬНО устанавливаем наш пакет
+          # 1. Сначала обновляем стандартные фиды, чтобы папка feeds/luci появилась
           ./scripts/feeds update -a
-          ./scripts/feeds install -p custom -a
           ./scripts/feeds install -a
+
+          # 2. Теперь копируем ваш проект ПРЯМО в фид LuCI
+          # Это обманывает систему сборки, заставляя её думать, что это часть стандартного LuCI
+          DEST_DIR="feeds/luci/applications/$PKG_NAME"
+          mkdir -p "$DEST_DIR"
+          cp $GITHUB_WORKSPACE/Makefile "$DEST_DIR/"
+          cp -r $GITHUB_WORKSPACE/htdocs "$DEST_DIR/"
+          cp -r $GITHUB_WORKSPACE/root "$DEST_DIR/"
+
+          # 3. Переиндексируем фиды, чтобы наш пакет появился в меню
+          ./scripts/feeds install -p luci $PKG_NAME
           
-          # 5. Генерируем конфиг
+          # 4. Включаем его в конфиг
+          echo "CONFIG_PACKAGE_$PKG_NAME=y" >> .config
           make defconfig
           
-          # Проверка: если пакета нет в .config, выводим ошибку сразу
-          if ! grep -q "CONFIG_PACKAGE_$PKG_NAME=y" .config; then
-            echo "CONFIG_PACKAGE_$PKG_NAME=y" >> .config
-            make defconfig
-          fi
-          
-          # 6. Сборка
-          make package/$PKG_NAME/compile V=s
+          # 5. Сборка (теперь путь будет именно таким)
+          make package/feeds/luci/$PKG_NAME/compile V=s || (echo "Логи сборки выше"; exit 1)
 
 
       - name: Prepare Repository Structure
