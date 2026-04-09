@@ -59,16 +59,12 @@ jobs:
           mkdir -p deploy/x86_64
           cp sdk/bin/packages/x86_64/base/*.apk deploy/x86_64/
           cd deploy/x86_64
-          
-          ls -R
 
           # Создаем индекс и подписываем его
           # (Используем контейнер alpine для доступа к инструментам apk)
           docker run --rm -v $KEY_DIR:/key -v $(pwd):/work -w /work alpine:latest sh -c "
             apk add apk-tools abuild
-            apk index -o APKINDEX.tar.gz *.apk
-
-            ls -la /key
+            apk mkndx --allow-untrusted -o APKINDEX.tar.gz *.apk
             abuild-sign -k /key/private.pem APKINDEX.tar.gz
           "
 
