@@ -15,9 +15,10 @@ jobs:
       - name: Install OpenWrt SDK
         run: |
           # Пример для x86_64, замените под свою архитектуру если нужно
-          wget https://downloads.openwrt.org/releases/24.10.4/targets/x86/64/openwrt-sdk-24.10.4-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst
-          tar xf openwrt-sdk-24.10.4-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst --strip-components=1
-          rm -f openwrt-sdk-24.10.4-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+          wget https://downloads.openwrt.org/releases/25.12.2/targets/x86/64/openwrt-sdk-25.12.2-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst
+          tar xf openwrt-sdk-25.12.2-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst --strip-components=1
+          rm -f openwrt-sdk-25.12.2-x86-64_gcc-14.3.0_musl.Linux-x86_64.tar.zst
+
 
       - name: Setup Keys
         run: |
@@ -30,26 +31,23 @@ jobs:
         run: |
           PKG_NAME="luci-app-singbox-subscriptions"
 
-          # 1. Создаем папку пакета ПРЯМО в дереве SDK
-          mkdir -p package/utils/$PKG_NAME
+          mkdir -p package/myapp
+          
+          cp Makefile package/myapp/
+          [ -d htdocs ] && cp -r htdocs package/myapp/
+          [ -d root ] && cp -r root package/myapp/
 
-          # 2. Копируем файлы проекта (важно: Makefile в корень, папки как есть)
-          cp $GITHUB_WORKSPACE/Makefile package/utils/$PKG_NAME/
-          [ -d "$GITHUB_WORKSPACE/htdocs" ] && cp -r $GITHUB_WORKSPACE/htdocs package/utils/$PKG_NAME/
-          [ -d "$GITHUB_WORKSPACE/root" ] && cp -r $GITHUB_WORKSPACE/root package/utils/$PKG_NAME/
+          chmod +x package/myapp/root/usr/bin/singbox-update 2>/dev/null || true
 
-          # 3. Инициализируем минимальный конфиг БЕЗ обновления фидов
-          # (Это исключит ошибки "feeds/base: No such file")
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
           make defconfig
 
-          # 4. Принудительно включаем наш пакет в сборку
           echo "CONFIG_PACKAGE_$PKG_NAME=y" >> .config
-          
-          # 5. Собираем только наш пакет
-          # SDK сам подтянет зависимости из своих внутренних индексов
-          make package/utils/$PKG_NAME/compile V=s || (echo "Сборка не удалась. Логи выше."; exit 1)
+          echo "CONFIG_PACKAGE_apk=y" >> .config
 
-
+          make package/myapp/compile V=s
 
       - name: Prepare Repository Structure
         run: |
