@@ -28,15 +28,25 @@ jobs:
 
       - name: Build Package
         run: |
-          # Добавляем наше приложение в SDK
-          mkdir -p package/luci-app-singbox-subscriptions
-          cp -r $GITHUB_WORKSPACE/* package/luci-app-singbox-subscriptions/
+          # Создаем папку с точным названием пакета
+          PKGNAMESUB="luci-app-singbox-subscriptions"
+          mkdir -p package/$PKGNAMESUB
           
-          # Обновляем фиды и собираем только наш пакет
+          # Копируем только файлы проекта (Makefile, htdocs, root), избегая рекурсии
+          cp $GITHUB_WORKSPACE/Makefile ./package/$PKGNAMESUB/
+          [ -d "$GITHUB_WORKSPACE/htdocs" ] && cp -r $GITHUB_WORKSPACE/htdocs ./package/$PKGNAMESUB/
+          [ -d "$GITHUB_WORKSPACE/root" ] && cp -r $GITHUB_WORKSPACE/root ./package/$PKGNAMESUB/
+          
+          # Обновляем фиды и собираем
           ./scripts/feeds update -a
           ./scripts/feeds install -a
+          
+          # Генерируем конфиг сборки
           make defconfig
-          make package/luci-app-singbox-subscriptions/compile V=s
+          
+          # Собираем именно наш пакет
+          make package/$PKGNAMESUB/compile V=s
+
 
       - name: Prepare Repository Structure
         run: |
