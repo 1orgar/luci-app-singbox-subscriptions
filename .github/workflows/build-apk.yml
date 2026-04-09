@@ -25,10 +25,9 @@ jobs:
 
       - name: Setup Keys
         run: |
-          echo "${{ secrets.APK_PRIVATE_KEY }}" > private.pem
+          mkdir pk
+          echo "${{ secrets.APK_PRIVATE_KEY }}" > pk/private.pem
           # Утилита для подписи ожидает ключ в определенном месте
-          mkdir -p ~/.abuild
-          cp private.pem ~/.abuild/saved-key.rsa
 
       - name: Build Package
         run: |
@@ -55,16 +54,17 @@ jobs:
 
       - name: Prepare Repository Structure
         run: |
+          KEY_DIR=$(pwd)/pk
           mkdir -p deploy/x86_64
           cp sdk/bin/packages/x86_64/base/*.apk deploy/x86_64/
           cd deploy/x86_64
           
           # Создаем индекс и подписываем его
           # (Используем контейнер alpine для доступа к инструментам apk)
-          docker run --rm -v $(pwd):/work -w /work alpine:latest sh -c "
+          docker run --rm -v $KEY_DIR:/key -v $(pwd):/work -w /work alpine:latest sh -c "
             apk add apk-tools abuild
             apk index -o APKINDEX.tar.gz *.apk
-            abuild-sign APKINDEX.tar.gz
+            abuild-sign -k /key/private.pem APKINDEX.tar.gz
           "
 
       - name: Deploy to GitHub Pages
