@@ -55,6 +55,9 @@ jobs:
 
       - name: Prepare Repository Structure
         run: |
+          pwd
+          ls -R sdk/bin
+          
           mkdir -p deploy/x86_64
           cp sdk/bin/packages/x86_64/luci/*.apk deploy/x86_64/
           cd deploy/x86_64
