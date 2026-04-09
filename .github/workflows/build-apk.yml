@@ -38,10 +38,10 @@ jobs:
           [ -d "$GITHUB_WORKSPACE/root" ] && cp -r $GITHUB_WORKSPACE/root $GITHUB_WORKSPACE/my-repo/$PKG_NAME/
 
           # 2. Подключаем этот фид в SDK через абсолютный путь
-          echo "src-link mylocal $GITHUB_WORKSPACE/my-repo" >> feeds.conf.default
+          echo "src-link mylocal $GITHUB_WORKSPACE/my-repo" > feeds.conf.default
           # Добавляем стандартные фиды обратно
-          #   echo "src-git base https://openwrt.org" >> feeds.conf.default
-          #   echo "src-git luci https://openwrt.org" >> feeds.conf.default
+          echo "src-git base https://openwrt.org" >> feeds.conf.default
+          echo "src-git luci https://openwrt.org" >> feeds.conf.default
 
           echo ">> UPDATE FEEDS"
 
