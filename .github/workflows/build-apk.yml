@@ -29,28 +29,47 @@ jobs:
       - name: Build Package
         run: |
           PKG_NAME="luci-app-singbox-subscriptions"
-          
-          # 1. Сначала обновляем стандартные фиды, чтобы папка feeds/luci появилась
+
+          # 1. Создаем структуру локального фида ВНЕ папки SDK
+          # (Важно: Makefile должен лежать в папке с именем пакета)
+          mkdir -p $GITHUB_WORKSPACE/my-repo/$PKG_NAME
+          cp $GITHUB_WORKSPACE/Makefile $GITHUB_WORKSPACE/my-repo/$PKG_NAME/
+          [ -d "$GITHUB_WORKSPACE/htdocs" ] && cp -r $GITHUB_WORKSPACE/htdocs $GITHUB_WORKSPACE/my-repo/$PKG_NAME/
+          [ -d "$GITHUB_WORKSPACE/root" ] && cp -r $GITHUB_WORKSPACE/root $GITHUB_WORKSPACE/my-repo/$PKG_NAME/
+
+          # 2. Подключаем этот фид в SDK через абсолютный путь
+          echo "src-link mylocal $GITHUB_WORKSPACE/my-repo" >> feeds.conf.default
+          # Добавляем стандартные фиды обратно
+          #   echo "src-git base https://openwrt.org" >> feeds.conf.default
+          #   echo "src-git luci https://openwrt.org" >> feeds.conf.default
+
+          echo ">> UPDATE FEEDS"
+
+          # 3. Обновляем и индексируем
           ./scripts/feeds update -a
+          ./scripts/feeds install -p mylocal -a
           ./scripts/feeds install -a
 
-          # 2. Теперь копируем ваш проект ПРЯМО в фид LuCI
-          # Это обманывает систему сборки, заставляя её думать, что это часть стандартного LuCI
-          DEST_DIR="feeds/luci/applications/$PKG_NAME"
-          mkdir -p "$DEST_DIR"
-          cp $GITHUB_WORKSPACE/Makefile "$DEST_DIR/"
-          cp -r $GITHUB_WORKSPACE/htdocs "$DEST_DIR/"
-          cp -r $GITHUB_WORKSPACE/root "$DEST_DIR/"
+          echo ">> FEEDS"
+          ./scripts/feeds list
 
-          # 3. Переиндексируем фиды, чтобы наш пакет появился в меню
-          ./scripts/feeds install -p luci $PKG_NAME
-          
-          # 4. Включаем его в конфиг
+          # 4. Проверяем, появился ли пакет в списке
+          if ! ./scripts/feeds list | grep -q "$PKG_NAME"; then
+            echo "Error: Package not found in feeds!"
+            exit 1
+          fi
+
+          echo ">> DEFCONFIG"
+
+          # 5. Конфигурация и сборка
+          make defconfig
           echo "CONFIG_PACKAGE_$PKG_NAME=y" >> .config
           make defconfig
           
-          # 5. Сборка (теперь путь будет именно таким)
-          make package/feeds/luci/$PKG_NAME/compile V=s || (echo "Логи сборки выше"; exit 1)
+          echo ">> COMPILE"
+
+          # Путь для сборки пакетов из фидов всегда такой:
+          make package/feeds/mylocal/$PKG_NAME/compile V=s
 
 
       - name: Prepare Repository Structure
