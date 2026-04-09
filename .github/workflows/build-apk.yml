@@ -28,24 +28,23 @@ jobs:
 
       - name: Build Package
         run: |
-          # Создаем папку с точным названием пакета
-          PKGNAMESUB="luci-app-singbox-subscriptions"
-          mkdir -p package/$PKGNAMESUB
+          PKG_NAME="luci-app-singbox-subscriptions"
+          mkdir -p package/$PKG_NAME
           
-          # Копируем только файлы проекта (Makefile, htdocs, root), избегая рекурсии
-          cp $GITHUB_WORKSPACE/Makefile ./package/$PKGNAMESUB/
-          [ -d "$GITHUB_WORKSPACE/htdocs" ] && cp -r $GITHUB_WORKSPACE/htdocs ./package/$PKGNAMESUB/
-          [ -d "$GITHUB_WORKSPACE/root" ] && cp -r $GITHUB_WORKSPACE/root ./package/$PKGNAMESUB/
+          cp Makefile package/$PKG_NAME/
+          [ -d htdocs ] && cp -r htdocs package/$PKG_NAME/
+          [ -d root ] && cp -r root package/$PKG_NAME/
           
-          # Обновляем фиды и собираем
+          chmod +x package/$PKG_NAME/root/usr/bin/singbox-update 2>/dev/null || true
+
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # Генерируем конфиг сборки
-          make defconfig
+          # ЭТА СТРОКА ВАЖНА: принудительно включаем ваш пакет в сборку
+          echo "CONFIG_PACKAGE_$PKG_NAME=y" >> .config
           
-          # Собираем именно наш пакет
-          make package/$PKGNAMESUB/compile V=s
+          make defconfig
+          make package/$PKG_NAME/compile V=s
 
 
       - name: Prepare Repository Structure
