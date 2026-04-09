@@ -30,24 +30,33 @@ jobs:
         run: |
           PKG_NAME="luci-app-singbox-subscriptions"
           
-          # 1. Создаем отдельную папку для исходников вне папки SDK
-          mkdir -p $GITHUB_WORKSPACE/custom-feed/$PKG_NAME
-          cp $GITHUB_WORKSPACE/Makefile $GITHUB_WORKSPACE/custom-feed/$PKG_NAME/
-          [ -d htdocs ] && cp -r htdocs $GITHUB_WORKSPACE/custom-feed/$PKG_NAME/
-          [ -d root ] && cp -r root $GITHUB_WORKSPACE/custom-feed/$PKG_NAME/
+          # 1. Удаляем старые попытки и создаем чистую структуру
+          rm -rf package/$PKG_NAME
+          mkdir -p package/$PKG_NAME
           
-          # 2. Добавляем эту папку как локальный фид
-          echo "src-link custom $GITHUB_WORKSPACE/custom-feed" > feeds.conf.default
+          # 2. Копируем файлы проекта напрямую в папку package SDK
+          cp $GITHUB_WORKSPACE/Makefile package/$PKG_NAME/
+          [ -d "$GITHUB_WORKSPACE/htdocs" ] && cp -r $GITHUB_WORKSPACE/htdocs package/$PKG_NAME/
+          [ -d "$GITHUB_WORKSPACE/root" ] && cp -r $GITHUB_WORKSPACE/root package/$PKG_NAME/
           
-          # 3. Обновляем фиды (теперь SDK увидит 'custom')
+          # 3. Принудительно устанавливаем права на скрипт
+          if [ -d "package/$PKG_NAME/root/usr/bin" ]; then
+            chmod +x package/$PKG_NAME/root/usr/bin/*
+          fi
+
+          # 4. Обновляем фиды
           ./scripts/feeds update -a
-          ./scripts/feeds install -a -p custom
           ./scripts/feeds install -a
           
-          # 4. Конфигурируем и собираем
+          # 5. КЛЮЧЕВОЙ МОМЕНТ: пересобираем индекс пакетов, чтобы SDK увидел новичка
+          make package/symlinks
+          
+          # 6. Включаем пакет в конфиг
+          echo "CONFIG_PACKAGE_$PKG_NAME=y" >> .config
           make defconfig
-          # Инсталлируем конкретно наш пакет в дерево сборки
-          make package/$PKG_NAME/compile V=s || (echo "Логи сборки выше"; exit 1)
+          
+          # 7. Сборка (используем упрощенный вызов)
+          make package/$PKG_NAME/compile V=s
 
 
       - name: Prepare Repository Structure
